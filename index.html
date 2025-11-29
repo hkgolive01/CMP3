@@ -1,0 +1,1376 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CMP3</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent: #0b76ef;
+      --muted: #667085;
+      --bg: #f6f8fb;
+      --card: #fff;
+      --radius: 12px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial;
+      background: var(--bg);
+      color: #0f1724;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 140px;
+      background: linear-gradient(180deg, #ffffff, #f3f8ff);
+      border-bottom: 1px solid rgba(15, 23, 36, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 16px;
+      z-index: 1200;
+      box-shadow: 0 6px 20px rgba(15, 23, 36, 0.04);
+      transition: height .18s;
+    }
+
+    .preview-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .preview-wrap {
+      flex: 1;
+      height: 120px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      position: relative;
+    }
+
+    canvas#sequencePreview {
+      height: 120px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #fff, #f7fbff);
+      cursor: pointer;
+      display: block;
+      flex: 0 0 auto;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .legend {
+      position: relative;
+      height: 44px;
+      overflow: hidden;
+      overflow-y: hidden;
+      padding: 6px 8px;
+      white-space: nowrap;
+      box-sizing: border-box;
+      user-select: none;
+      cursor: default;
+    }
+
+    .legend-inner {
+      position: relative;
+      height: 100%;
+      transition: transform .12s linear;
+      will-change: transform;
+    }
+
+    .legend-item {
+      position: absolute;
+      top: 6px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(15, 23, 36, 0.04);
+      box-sizing: border-box;
+      min-width: 44px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .color-box {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      box-shadow: inset 0 -2px rgba(0, 0, 0, 0.06);
+      flex: 0 0 14px;
+    }
+
+    .legend-empty {
+      color: var(--muted);
+      padding: 8px;
+    }
+
+    .page {
+      padding-top: 160px;
+      max-width: 1920px;
+      margin: 18px auto;
+      padding-left: 20px;
+      padding-right: 20px;
+      transition: padding-top .18s;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      min-height: 60vh;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: 0 8px 30px rgba(15, 23, 36, 0.03);
+      border: 1px solid rgba(15, 23, 36, 0.06);
+      display: flex;
+      flex-direction: column;
+    }
+
+    h3 {
+      margin: 4px 0 12px 0;
+      font-size: 16px;
+      color: #0b1220;
+    }
+
+    .dropzone {
+      border: 2px dashed rgba(11, 118, 239, 0.12);
+      border-radius: 12px;
+      padding: 22px;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      background: linear-gradient(180deg, #fff, #fbfdff);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .dropzone.drag {
+      box-shadow: 0 12px 40px rgba(11, 118, 239, 0.08);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .file-list {
+      margin-top: 14px;
+      overflow: auto;
+      flex: 1;
+      padding-right: 6px;
+    }
+
+    .file-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+      background: linear-gradient(180deg, #fff, #fcfdff);
+      border: 1px solid rgba(15, 23, 36, 0.04);
+    }
+
+    .file-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-weight: 700;
+      flex: 0 0 44px;
+      background: linear-gradient(180deg, #fff, #e8f5ff);
+    }
+
+    .file-meta {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .file-meta strong {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 14px;
+    }
+
+    .file-meta .muted {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .wavewrap {
+      border-radius: 10px;
+      border: 1px solid rgba(15, 23, 36, 0.04);
+      padding: 10px;
+      background: linear-gradient(180deg, #fff, #fbfdff);
+    }
+
+    .ruler {
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    canvas#wave {
+      width: 100%;
+      height: 160px;
+      border-radius: 8px;
+      display: block;
+      cursor: crosshair;
+      background: linear-gradient(180deg, #fff, #f7fbff);
+      box-shadow: inset 0 -6px 12px rgba(11, 118, 239, 0.02);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    button {
+      background: var(--accent);
+      color: white;
+      border: 0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all .12s;
+    }
+
+    button.ghost {
+      background: white;
+      color: var(--accent);
+      border: 1px solid rgba(11, 118, 239, 0.08);
+    }
+
+    button.small {
+      padding: 6px 8px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    input[type=number],
+    select {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(15, 23, 36, 0.06);
+    }
+
+    input.compact {
+      width: 72px;
+      padding: 6px 8px;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
+    #sequence {
+      min-height: 220px;
+      border-radius: 10px;
+      padding: 10px;
+      background: linear-gradient(180deg, #fbfdff, #f8fafc);
+      border: 1px dashed rgba(15, 23, 36, 0.04);
+      overflow: auto;
+    }
+
+    .seq-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 10px;
+      background: white;
+      border: 1px solid rgba(15, 23, 36, 0.04);
+      margin-bottom: 10px;
+    }
+
+    .seq-item .info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .seq-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(4, 10, 20, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity .12s;
+    }
+
+    .overlay.show {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .loader {
+      background: white;
+      padding: 18px 22px;
+      border-radius: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      box-shadow: 0 12px 40px rgba(2, 6, 23, 0.4);
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 4px solid rgba(11, 118, 239, 0.12);
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    #downloadMp3Top {
+      position: fixed;
+      top: 18px;
+      right: 20px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--accent);
+      color: white;
+      border: 0;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 12px 40px rgba(11, 118, 239, 0.12);
+    }
+
+    @media(max-width:1030px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+
+      .file-actions button {
+        min-width: 64px;
+      }
+    }
+
+    .legend {
+      cursor: default;
+    }
+
+    .legend-inner .legend-item {
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar" id="topbar">
+    <div class="preview-row">
+      <div class="preview-wrap" id="previewWrap" title="水平捲動以查看整個序列">
+        <canvas id="sequencePreview"></canvas>
+      </div>
+      <div class="top-controls">
+        <button id="topPlay">播放</button>
+        <button id="topPause" class="ghost">暫停</button>
+        <!-- 頂欄下載按鈕（位於頂欄，方便快速下載合併後音訊） -->
+        <button id="downloadMergedTop" class="ghost small" title="下載合併後的 MP3">下載合併 (MP3)</button>
+      </div>
+    </div>
+    <div class="legend" id="legend">
+      <div class="legend-inner" id="legendInner"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="loader">
+      <div class="spinner"></div>
+      <div><strong id="overlayTitle">處理中…</strong>
+        <div id="overlaySub" class="muted" style="margin-top:6px">請稍候</div>
+      </div>
+    </div>
+  </div>
+
+  <button id="downloadMp3Top" title="按此匯出高品質 MP3" disabled>匯出 MP3</button>
+
+  <div class="page" id="page">
+    <div class="app">
+      <section id="library" class="card">
+        <h3>檔案庫</h3>
+        <div id="dropzone" class="dropzone">拖入 MP3 / MP4 至此，或點擊選取檔案（高度已放大）</div>
+        <input id="fileInput" type="file" accept="audio/*,video/*" multiple style="display:none">
+        <div class="file-list" id="fileList"></div>
+      </section>
+
+      <section id="editor" class="card">
+        <h3>編輯面板</h3>
+        <div class="wavewrap">
+          <div class="ruler"><span id="rulerLeft">播放：0.00s</span><span id="rulerRight" class="muted">總長：0.00s</span>
+          </div>
+          <canvas id="wave"></canvas>
+          <div style="display:flex;justify-content:space-between;margin-top:8px">
+            <div class="muted">檔案：<span id="currentName">（未選取）</span></div>
+            <div class="muted">時長：<span id="duration">0.00</span>s</div>
+          </div>
+        </div>
+
+        <div class="row" style="align-items:center;margin-top:10px">
+          <label>開始 <input id="startInput" type="number" step="0.01" value="0" class="compact"> 秒</label>
+          <button id="recordStart" class="ghost small">記錄開始時間</button>
+          <button id="unlockStart" class="ghost small" style="display:none">解鎖開始</button>
+
+          <label>結束 <input id="endInput" type="number" step="0.01" value="0" class="compact"> 秒</label>
+          <button id="recordEnd" class="ghost small">記錄結束時間</button>
+          <button id="unlockEnd" class="ghost small" style="display:none">解鎖結束</button>
+        </div>
+
+        <div class="row" style="align-items:center;margin-top:8px">
+          <button id="createClip" class="ghost">建立片段</button>
+          <button id="removeSegment" class="ghost">移除片段</button>
+          <div style="width:1px;height:28px;background:rgba(15,23,36,0.04);margin:0 8px;"></div>
+          <button id="playEditorBtn">播放</button>
+          <button id="pauseEditorBtn" class="ghost">暫停</button>
+          <label style="margin-left:12px;display:flex;align-items:center;gap:8px;color:var(--muted)"><input
+              id="autoPlayEditor" type="checkbox" checked> 編輯自動播放</label>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <label>快速靜音：</label>
+          <button id="silence5" class="ghost">+5s</button>
+          <button id="silence10" class="ghost">+10s</button>
+          <button id="silence20" class="ghost">+20s</button>
+          <label style="margin-left:6px">自訂 <input id="silenceSeconds" class="compact" type="number" min="1" step="1"
+              value="1"> 秒</label>
+          <button id="insertSilence" class="ghost">插入靜音</button>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <label>音量 <input id="volume" type="range" min="0" max="2" step="0.01" value="1" style="width:200px"></label>
+          <button id="addToSequence">序列+ ➜</button>
+          <div class="muted">若未選取範圍將加入整首</div>
+        </div>
+      </section>
+
+      <section id="sequencePanel" class="card">
+        <h3>輸出序列</h3>
+        <div id="sequence"></div>
+
+        <div style="margin-top:12px" class="row">
+          <label>MP3 品質
+            <select id="mp3Bitrate">
+              <option value="128">128</option>
+              <option value="192" selected>192</option>
+              <option value="256">256</option>
+              <option value="320">320</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-top:10px" class="muted">流程：上傳 → 選取或拖曳選取 → 序列+ → 在右側列微調 → 按「匯出 MP3」或上方「下載合併」製作高品質檔。</div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lamejs@1.2.0/lame.min.js"></script>
+  <script>
+    const files = [];
+    const sequence = []; let lastExportBlobUrl = null;
+    let isExporting = false;
+
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+
+    let editorSource = null;
+    let editorIsPlaying = false;
+    let editorStartRealtime = 0;
+    let editorCurrentPos = 0;
+    let editorPlayEnd = 0;
+
+    let sequenceRenderedBuffer = null;
+    let seqSource = null;
+    let seqIsPlaying = false;
+    let seqStartRealtime = 0;
+    let seqOffset = 0;
+    let seqStopTimer = null;
+
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const waveCanvas = document.getElementById('wave');
+    const waveCtx = waveCanvas.getContext('2d');
+    const rulerLeft = document.getElementById('rulerLeft');
+    const rulerRight = document.getElementById('rulerRight');
+    const currentName = document.getElementById('currentName');
+    const durationLabel = document.getElementById('duration');
+    const startInput = document.getElementById('startInput');
+    const endInput = document.getElementById('endInput');
+    const recordStart = document.getElementById('recordStart');
+    const recordEnd = document.getElementById('recordEnd');
+    const unlockStart = document.getElementById('unlockStart');
+    const unlockEnd = document.getElementById('unlockEnd');
+    const createClip = document.getElementById('createClip');
+    const removeSegmentBtn = document.getElementById('removeSegment');
+    const silence5 = document.getElementById('silence5');
+    const silence10 = document.getElementById('silence10');
+    const silence20 = document.getElementById('silence20');
+    const silenceSecondsInput = document.getElementById('silenceSeconds');
+    const insertSilence = document.getElementById('insertSilence');
+    const addToSequenceBtn = document.getElementById('addToSequence');
+    const sequenceDiv = document.getElementById('sequence');
+    const mp3Bitrate = document.getElementById('mp3Bitrate');
+    const downloadMp3Top = document.getElementById('downloadMp3Top');
+    const downloadMergedTop = document.getElementById('downloadMergedTop');
+    const overlay = document.getElementById('overlay');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlaySub = document.getElementById('overlaySub');
+
+    const sequencePreviewCanvas = document.getElementById('sequencePreview');
+    const seqPreviewCtx = sequencePreviewCanvas.getContext('2d');
+    const previewWrap = document.getElementById('previewWrap');
+    const topPlay = document.getElementById('topPlay');
+    const topPause = document.getElementById('topPause');
+    const playEditorBtn = document.getElementById('playEditorBtn');
+    const pauseEditorBtn = document.getElementById('pauseEditorBtn');
+    const autoPlayEditor = document.getElementById('autoPlayEditor');
+    const legendDiv = document.getElementById('legend');
+    const legendInner = document.getElementById('legendInner');
+    const topbar = document.getElementById('topbar');
+    const pageEl = document.getElementById('page');
+
+    let selectedFileId = null;
+    let viewingBuffer = null;
+    let cursorTime = 0;
+    let selecting = false, selectStartX = 0, selectEndX = 0;
+    let startLocked = false, endLocked = false;
+
+    const palette = ['#0b76ef', '#ef6b6b', '#f59e0b', '#10b981', '#7c3aed', '#06b6d4', '#ef4dbb', '#f97316', '#3b82f6', '#8b5cf6'];
+    const sourceColorMap = new Map();
+    function colorForSource(id) {
+      if (!id) return '#b0b7c6';
+      if (sourceColorMap.has(id)) return sourceColorMap.get(id);
+      const used = Array.from(sourceColorMap.values());
+      const unused = palette.filter(c => !used.includes(c));
+      const color = unused.length ? unused[0] : palette[sourceColorMap.size % palette.length];
+      sourceColorMap.set(id, color);
+      return color;
+    }
+
+    const simplifiedPreview = false;
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+    dropzone.addEventListener('drop', async (e) => { e.preventDefault(); dropzone.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    fileInput.addEventListener('click', () => { try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { } document.body.style.cursor = 'auto'; setTimeout(() => document.body.style.cursor = '', 200); });
+
+    async function handleFiles(list) {
+      const arr = Array.from(list);
+      for (const f of arr) {
+        if (!(f.type.startsWith('audio') || f.type.startsWith('video') || f.name.match(/\.mp3$|\.mp4$|\.wav$/i))) continue;
+        const id = Math.random().toString(36).slice(2, 9);
+        const item = { id, name: f.name, file: f, audioBuffer: null, originalName: f.name };
+        files.push(item); renderFileList();
+        try {
+          const ab = await f.arrayBuffer();
+          const decoded = await ac.decodeAudioData(ab.slice(0));
+          item.audioBuffer = decoded; renderFileList();
+        } catch (err) { console.warn('decode failed', f.name, err); renderFileList(); }
+      }
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = '';
+      for (const it of files) {
+        const div = document.createElement('div'); div.className = 'file-item'; div.dataset.fileid = it.id;
+        const left = document.createElement('div'); left.className = 'file-left';
+        left.innerHTML = `<div class="file-badge">${getExt(it.name)}</div><div class="file-meta"><strong title="${escapeHtml(it.name)}">${escapeHtml(it.name)}</strong><div class='muted'>${it.audioBuffer ? (it.audioBuffer.duration.toFixed(2) + ' s') : '(解析中或無法解析)'}</div></div>`;
+        const actions = document.createElement('div'); actions.className = 'file-actions';
+        const load = document.createElement('button'); load.className = 'ghost'; load.textContent = '編輯'; load.onclick = () => selectFile(it.id, true);
+        const add = document.createElement('button'); add.textContent = '序列+'; add.onclick = () => addClipToSequence(it.id, 0, (it.audioBuffer ? it.audioBuffer.duration : 0));
+        actions.appendChild(load); actions.appendChild(add);
+        div.appendChild(left); div.appendChild(actions); fileList.appendChild(div);
+      }
+    }
+
+    function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function getExt(name) { const m = name.split('.').pop() || ''; return m.slice(0, 3).toUpperCase(); }
+
+    function drawWaveform(buffer) {
+      const w = waveCanvas.width = Math.max(300, waveCanvas.clientWidth * devicePixelRatio);
+      const h = waveCanvas.height = Math.max(160, waveCanvas.clientHeight * devicePixelRatio);
+      waveCtx.clearRect(0, 0, w, h);
+      if (!buffer) { waveCtx.fillStyle = '#fff'; waveCtx.fillRect(0, 0, w, h); rulerLeft.textContent = '播放：0.00s'; rulerRight.textContent = '總長：0.00s'; return; }
+      const ch = buffer.numberOfChannels > 0 ? buffer.getChannelData(0) : new Float32Array(0);
+      const step = Math.max(1, Math.floor(ch.length / w));
+      waveCtx.fillStyle = '#ffffff'; waveCtx.fillRect(0, 0, w, h);
+      waveCtx.lineWidth = 1 * devicePixelRatio; waveCtx.strokeStyle = 'rgba(11,118,239,0.18)'; waveCtx.beginPath();
+      for (let i = 0; i < w; i++) {
+        const start = i * step; let min = 1, max = -1;
+        for (let j = 0; j < step && (start + j) < ch.length; j++) { const v = ch[start + j]; if (v < min) min = v; if (v > max) max = v; }
+        const y1 = (1 - ((min + 1) / 2)) * h; const y2 = (1 - ((max + 1) / 2)) * h;
+        waveCtx.moveTo(i, y1); waveCtx.lineTo(i, y2);
+      }
+      waveCtx.stroke();
+      drawSelectionAndCursor();
+      const playingPos = editorIsPlaying ? (editorCurrentPos + (ac.currentTime - editorStartRealtime)) : editorCurrentPos;
+      rulerLeft.textContent = `播放：${playingPos.toFixed(2)}s`;
+      rulerRight.textContent = `總長：${buffer.duration.toFixed(2)}s`;
+    }
+
+    function drawSelectionAndCursor() {
+      if (!viewingBuffer) return;
+      const w = waveCanvas.width; const h = waveCanvas.height; const dur = viewingBuffer.duration;
+      let s = Math.max(0, parseFloat(startInput.value) || 0);
+      let e = Math.min(parseFloat(endInput.value) || dur, dur);
+      if (e <= s) e = dur;
+      const x1 = (s / dur) * w; const x2 = (e / dur) * w;
+      waveCtx.fillStyle = 'rgba(8,12,20,0.20)'; waveCtx.fillRect(0, 0, x1, h); waveCtx.fillRect(x2, 0, w - x2, h);
+      waveCtx.fillStyle = 'rgba(11,118,239,0.14)'; waveCtx.fillRect(x1, 0, Math.max(2, x2 - x1), h);
+      waveCtx.strokeStyle = 'rgba(11,118,239,0.75)'; waveCtx.lineWidth = Math.max(1, devicePixelRatio);
+      waveCtx.beginPath(); waveCtx.moveTo(x1 + 0.5, 0); waveCtx.lineTo(x1 + 0.5, h); waveCtx.moveTo(x2 - 0.5, 0); waveCtx.lineTo(x2 - 0.5, h); waveCtx.stroke();
+
+      let playedPos = editorCurrentPos;
+      if (editorIsPlaying) playedPos = Math.min(viewingBuffer.duration, editorCurrentPos + (ac.currentTime - editorStartRealtime));
+      if (playedPos > 0) {
+        const px = (playedPos / dur) * w;
+        const pxStart = x1;
+        const pxEnd = Math.min(px, x2);
+        if (pxEnd > pxStart) { waveCtx.fillStyle = 'rgba(11,118,239,0.22)'; waveCtx.fillRect(pxStart, 0, Math.max(2, pxEnd - pxStart), h); }
+        waveCtx.strokeStyle = 'rgba(11,118,239,0.95)'; waveCtx.beginPath(); waveCtx.moveTo(px, 0); waveCtx.lineTo(px, h); waveCtx.stroke();
+      } else {
+        const cx = (cursorTime / dur) * w;
+        waveCtx.strokeStyle = 'rgba(11,118,239,0.95)'; waveCtx.beginPath(); waveCtx.moveTo(cx, 0); waveCtx.lineTo(cx, h); waveCtx.stroke();
+      }
+    }
+
+    function xToTime(x) { const rect = waveCanvas.getBoundingClientRect(); const rel = Math.max(0, Math.min(1, (x - rect.left) / rect.width)); if (!viewingBuffer) return 0; return rel * viewingBuffer.duration; }
+    waveCanvas.addEventListener('click', (e) => { if (!viewingBuffer) return; cursorTime = xToTime(e.clientX); drawWaveform(viewingBuffer); editorPlayFrom(cursorTime); });
+    waveCanvas.addEventListener('mousedown', (e) => { if (!viewingBuffer) return; selecting = true; selectStartX = e.clientX; selectEndX = e.clientX; cursorTime = xToTime(e.clientX); updateSelectionFromPixels(); drawWaveform(viewingBuffer); });
+    window.addEventListener('mousemove', (e) => { if (!selecting) return; selectEndX = e.clientX; cursorTime = xToTime(e.clientX); updateSelectionFromPixels(); drawWaveform(viewingBuffer); });
+    window.addEventListener('mouseup', (e) => { if (!selecting) return; selecting = false; selectEndX = e.clientX; cursorTime = xToTime(e.clientX); updateSelectionFromPixels(); drawWaveform(viewingBuffer); });
+
+    function updateSelectionFromPixels() {
+      if (!viewingBuffer) return;
+      const rect = waveCanvas.getBoundingClientRect();
+      const startX = Math.min(selectStartX, selectEndX);
+      const endX = Math.max(selectStartX, selectEndX);
+      const relStart = Math.max(0, Math.min(1, (startX - rect.left) / rect.width));
+      const relEnd = Math.max(0, Math.min(1, (endX - rect.left) / rect.width));
+      const s = relStart * viewingBuffer.duration;
+      const e = relEnd * viewingBuffer.duration;
+      if (!startLocked) startInput.value = s.toFixed(3);
+      if (!endLocked) endInput.value = e.toFixed(3);
+    }
+
+    recordStart.addEventListener('click', () => { if (!viewingBuffer) return alert('請先載入檔案'); if (startLocked) return alert('開始時間已鎖定'); startInput.value = Math.max(0, Math.min(viewingBuffer.duration, cursorTime)).toFixed(3); lockStart(true); drawWaveform(viewingBuffer); });
+    recordEnd.addEventListener('click', () => { if (!viewingBuffer) return alert('請先載入檔案'); if (endLocked) return alert('結束時間已鎖定'); endInput.value = Math.max(0, Math.min(viewingBuffer.duration, cursorTime)).toFixed(3); lockEnd(true); drawWaveform(viewingBuffer); });
+    unlockStart.addEventListener('click', () => lockStart(false));
+    unlockEnd.addEventListener('click', () => lockEnd(false));
+    function lockStart(val) { startLocked = !!val; startInput.disabled = startLocked; recordStart.textContent = startLocked ? '開始（鎖定）' : '記錄開始時間'; unlockStart.style.display = startLocked ? 'inline-block' : 'none'; }
+    function lockEnd(val) { endLocked = !!val; endInput.disabled = endLocked; recordEnd.textContent = endLocked ? '結束（鎖定）' : '記錄結束時間'; unlockEnd.style.display = endLocked ? 'inline-block' : 'none'; }
+
+    function stopEditorPlayback() {
+      if (editorSource) { try { editorSource.stop(); } catch (e) { } try { editorSource.disconnect(); } catch (e) { } editorSource = null; }
+      editorIsPlaying = false;
+      playEditorBtn.disabled = false; pauseEditorBtn.disabled = true;
+    }
+
+    function editorPlayFrom(startSec) {
+      if (!viewingBuffer) return;
+      let start = Math.max(0, Math.min(viewingBuffer.duration, startSec || 0));
+      let end = Math.min(viewingBuffer.duration, parseFloat(endInput.value) || viewingBuffer.duration);
+      if (end <= start) end = viewingBuffer.duration;
+      const playDuration = Math.max(0.001, end - start);
+      if (start >= viewingBuffer.duration) start = 0;
+      stopEditorPlayback();
+      editorSource = ac.createBufferSource();
+      editorSource.buffer = viewingBuffer;
+      editorSource.connect(ac.destination);
+      try { editorSource.start(0, start); } catch (e) { console.error('start failed', e); alert('播放失敗：' + e.message); return; }
+      editorStartRealtime = ac.currentTime;
+      editorCurrentPos = start;
+      editorPlayEnd = end;
+      editorIsPlaying = true;
+      playEditorBtn.disabled = true; pauseEditorBtn.disabled = false;
+      setTimeout(() => {
+        if (editorIsPlaying) { stopEditorPlayback(); editorCurrentPos = 0; drawWaveform(viewingBuffer); }
+      }, playDuration * 1000 + 60);
+      requestAnimationFrame(editorCursorLoop);
+    }
+
+    function editorPauseOrResume() {
+      if (!viewingBuffer) return;
+      if (editorIsPlaying) {
+        const elapsed = ac.currentTime - editorStartRealtime;
+        editorCurrentPos = Math.min(viewingBuffer.duration, editorCurrentPos + elapsed);
+        stopEditorPlayback();
+        drawWaveform(viewingBuffer);
+      } else {
+        let end = Math.min(viewingBuffer.duration, parseFloat(endInput.value) || viewingBuffer.duration);
+        if (end <= editorCurrentPos) end = viewingBuffer.duration;
+        editorPlayFrom(editorCurrentPos);
+      }
+    }
+
+    function editorCursorLoop() {
+      if (!editorIsPlaying || !viewingBuffer) return;
+      const elapsed = ac.currentTime - editorStartRealtime;
+      const pos = Math.min(viewingBuffer.duration, editorCurrentPos + elapsed);
+      if (pos >= editorPlayEnd - 0.0005) { stopEditorPlayback(); editorCurrentPos = 0; drawWaveform(viewingBuffer); return; }
+      drawWaveform(viewingBuffer);
+      requestAnimationFrame(editorCursorLoop);
+    }
+
+    playEditorBtn.addEventListener('click', () => {
+      if (!viewingBuffer) return alert('請先選擇檔案');
+      const s = Math.max(0, parseFloat(startInput.value) || 0);
+      editorPlayFrom(s);
+    });
+    pauseEditorBtn.addEventListener('click', () => editorPauseOrResume());
+
+    const PX_PER_SEC = 10;
+    const MAX_CANVAS_WIDTH = 120000;
+    async function renderSequencePreview() {
+      if (sequence.length === 0) { sequenceRenderedBuffer = null; drawPreviewEmpty(); renderLegend(); adjustTopbarHeight(); return; }
+      showOverlay('更新序列預覽', '正在渲染…');
+
+      const totalDuration = sequence.reduce((s, i) => s + (i.displayDuration || i.duration || 0), 0) || 0;
+      const virtualWidth = Math.max(300, Math.ceil(totalDuration * PX_PER_SEC));
+      const finalWidth = Math.min(virtualWidth, MAX_CANVAS_WIDTH);
+
+      try {
+        const targetSR = 44100;
+        const offline = new OfflineAudioContext(2, Math.ceil(totalDuration * targetSR), targetSR);
+        let cursor = 0;
+        for (const seg of sequence) {
+          if (seg.type === 'silence') {
+            const len = Math.ceil((seg.displayDuration || seg.duration) * targetSR);
+            const silent = offline.createBuffer(2, len, targetSR);
+            const ssrc = offline.createBufferSource(); ssrc.buffer = silent; ssrc.connect(offline.destination); ssrc.start(cursor);
+            cursor += seg.displayDuration || seg.duration;
+          } else {
+            const srcFile = files.find(f => f.id === seg.sourceId);
+            if (!srcFile || !srcFile.audioBuffer) { cursor += seg.displayDuration || seg.duration; continue; }
+            const origDur = seg.duration; const displayDur = seg.displayDuration || origDur;
+            const playbackRate = Math.max(0.01, origDur / displayDur);
+            const ssrc = offline.createBufferSource(); ssrc.buffer = srcFile.audioBuffer; ssrc.playbackRate.value = playbackRate;
+            ssrc.connect(offline.destination);
+            ssrc.start(cursor, seg.start, seg.duration);
+            cursor += displayDur;
+          }
+        }
+        const rendered = await offline.startRendering();
+        sequenceRenderedBuffer = rendered;
+        drawSequencePreview(finalWidth, virtualWidth);
+        renderLegend();
+        hideOverlay();
+        adjustTopbarHeight(virtualWidth);
+      } catch (err) {
+        hideOverlay();
+        console.error('preview render failed', err);
+        alert('預覽更新失敗：' + (err && err.message || err));
+      }
+    }
+
+    function drawSequencePreview(finalWidth, virtualWidth) {
+      const canvas = sequencePreviewCanvas;
+      const cssWidth = virtualWidth;
+      canvas.style.width = cssWidth + 'px';
+      const cssHeight = parseInt(getComputedStyle(previewWrap).height) || 90;
+      canvas.style.height = cssHeight + 'px';
+
+      const dpr = devicePixelRatio || 1;
+      const w = canvas.width = Math.max(1, Math.floor(cssWidth * dpr));
+      const h = canvas.height = Math.max(60, Math.floor(cssHeight * dpr));
+      seqPreviewCtx.clearRect(0, 0, w, h);
+      seqPreviewCtx.fillStyle = '#ffffff';
+      seqPreviewCtx.fillRect(0, 0, w, h);
+
+      const gridCssPx = 100;
+      seqPreviewCtx.lineWidth = Math.max(0.5, dpr * 0.5);
+      seqPreviewCtx.strokeStyle = 'rgba(102,112,133,0.08)';
+      seqPreviewCtx.font = `${11 * dpr}px Inter`;
+      seqPreviewCtx.fillStyle = 'rgba(102,112,133,0.6)';
+      for (let x = 0; x <= cssWidth; x += gridCssPx) {
+        const dx = Math.round(x * dpr) + 0.5;
+        seqPreviewCtx.beginPath();
+        seqPreviewCtx.moveTo(dx, 0);
+        seqPreviewCtx.lineTo(dx, h);
+        seqPreviewCtx.stroke();
+        const seconds = Math.round(x / PX_PER_SEC);
+        seqPreviewCtx.fillText(`${seconds}s`, dx + 4, 12 * dpr);
+      }
+
+      function drawBufferWaveAsLines(bufferChannelData, srcStartFrame, srcFrameLen, offsetCssPx, segCssPx, color, alphaFill = 0.06, strokeAlpha = 0.9) {
+        const cols = Math.max(1, Math.floor(segCssPx));
+        const step = Math.max(1, srcFrameLen / cols);
+        seqPreviewCtx.fillStyle = hexToRgba(color, alphaFill);
+        seqPreviewCtx.fillRect(Math.round(offsetCssPx * dpr), 0, Math.round(segCssPx * dpr), h);
+        seqPreviewCtx.beginPath();
+        seqPreviewCtx.lineWidth = Math.max(1, dpr * 0.6);
+        seqPreviewCtx.strokeStyle = hexToRgba(color, strokeAlpha);
+        for (let c = 0; c < cols; c++) {
+          const frameStart = Math.floor(srcStartFrame + c * step);
+          const frameEnd = Math.min(bufferChannelData.length, Math.floor(srcStartFrame + (c + 1) * step));
+          let min = 1, max = -1;
+          for (let fidx = frameStart; fidx < frameEnd; fidx++) {
+            const v = bufferChannelData[fidx] || 0;
+            if (v < min) min = v;
+            if (v > max) max = v;
+          }
+          const x = Math.round((offsetCssPx + c) * dpr) + 0.5;
+          const y1 = (1 - ((min + 1) / 2)) * h;
+          const y2 = (1 - ((max + 1) / 2)) * h;
+          seqPreviewCtx.moveTo(x, y1);
+          seqPreviewCtx.lineTo(x, y2);
+        }
+        seqPreviewCtx.stroke();
+      }
+
+      if (sequenceRenderedBuffer && sequenceRenderedBuffer.length > 0) {
+        try {
+          const buf = sequenceRenderedBuffer;
+          const chan = buf.numberOfChannels > 0 ? buf.getChannelData(0) : new Float32Array(0);
+          const cols = Math.max(1, Math.floor(w));
+          const step = Math.max(1, Math.floor(chan.length / cols));
+          seqPreviewCtx.lineWidth = Math.max(1, dpr * 0.8);
+          seqPreviewCtx.strokeStyle = 'rgba(11,118,239,0.95)';
+          seqPreviewCtx.beginPath();
+          for (let i = 0; i < cols; i++) {
+            const start = i * step;
+            let min = 1, max = -1;
+            for (let j = 0; j < step && (start + j) < chan.length; j++) {
+              const v = chan[start + j];
+              if (v < min) min = v;
+              if (v > max) max = v;
+            }
+            const x = Math.round(i * dpr) + 0.5;
+            const y1 = (1 - ((min + 1) / 2)) * h;
+            const y2 = (1 - ((max + 1) / 2)) * h;
+            seqPreviewCtx.moveTo(x, y1);
+            seqPreviewCtx.lineTo(x, y2);
+          }
+          seqPreviewCtx.stroke();
+        } catch (err) {
+          console.warn('draw from sequenceRenderedBuffer failed, fallback to per-segment drawing', err);
+        }
+      } else {
+        let offsetCssPx = 0;
+        for (const seg of sequence) {
+          const segCssPx = Math.max(1, Math.round((seg.displayDuration || seg.duration || 0) * PX_PER_SEC));
+          if (seg.type === 'silence') {
+            seqPreviewCtx.fillStyle = 'rgba(180,185,190,0.08)';
+            seqPreviewCtx.fillRect(Math.round(offsetCssPx * dpr), 0, Math.round(segCssPx * dpr), h);
+            seqPreviewCtx.fillStyle = 'rgba(120,125,130,0.12)';
+            seqPreviewCtx.fillRect(Math.round(offsetCssPx * dpr), Math.round(h * 0.6), Math.max(6, Math.round(segCssPx * dpr)), Math.max(2, Math.round(h * 0.25)));
+          } else {
+            const srcFile = files.find(f => f.id === seg.sourceId);
+            const color = colorForSource(seg.sourceId || seg.id);
+            if (!srcFile || !srcFile.audioBuffer) {
+              seqPreviewCtx.fillStyle = 'rgba(200,200,200,0.08)';
+              seqPreviewCtx.fillRect(Math.round(offsetCssPx * dpr), 0, Math.round(segCssPx * dpr), h);
+            } else {
+              const buf = srcFile.audioBuffer;
+              const sr = buf.sampleRate;
+              const chan = buf.numberOfChannels > 0 ? buf.getChannelData(0) : new Float32Array(0);
+              const srcStartFrame = Math.floor(seg.start * sr);
+              const srcFrameLen = Math.max(1, Math.floor(seg.duration * sr));
+              drawBufferWaveAsLines(chan, srcStartFrame, srcFrameLen, offsetCssPx, segCssPx, color, 0.06, 0.22);
+            }
+          }
+          offsetCssPx += segCssPx;
+        }
+      }
+
+      // set legend width to match canvas width and make legend follow preview via transform
+      legendInner.style.width = canvas.style.width;
+      // sync legend transform to current scroll (in case previewWrap already scrolled)
+      legendInner.style.transform = `translateX(-${previewWrap.scrollLeft}px)`;
+      legendDiv.scrollLeft = 0; // keep legend container from having its own scrollbar
+    }
+
+    function hexToRgba(hex, alpha) {
+      const c = hex.replace('#', '');
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function drawPreviewEmpty() {
+      const canvas = sequencePreviewCanvas;
+      canvas.style.width = '';
+      const w = canvas.width = Math.max(300, canvas.clientWidth * devicePixelRatio);
+      const h = canvas.height = Math.max(60, canvas.clientHeight * devicePixelRatio);
+      seqPreviewCtx.clearRect(0, 0, w, h);
+      seqPreviewCtx.fillStyle = '#f9fbff'; seqPreviewCtx.fillRect(0, 0, w, h);
+      seqPreviewCtx.fillStyle = 'rgba(102,112,133,0.12)'; seqPreviewCtx.fillRect(0, 0, w, h);
+      seqPreviewCtx.fillStyle = 'rgba(102,112,133,0.32)'; seqPreviewCtx.font = `${12 * devicePixelRatio}px Inter`; seqPreviewCtx.textAlign = 'center'; seqPreviewCtx.fillText('序列為空', w / 2, h / 2 + 4);
+      legendInner.innerHTML = '<div class="legend-empty">（序列為空）</div>';
+      legendInner.style.transform = 'translateX(0px)';
+    }
+
+    function renderLegend() {
+      legendInner.innerHTML = '';
+      if (sequence.length === 0) { legendInner.innerHTML = '<div class="legend-empty">（序列為空）</div>'; legendInner.style.transform = 'translateX(0px)'; return; }
+      let offsetCssPx = 0;
+      for (const seg of sequence) {
+        const segCssPx = Math.max(1, Math.round((seg.displayDuration || seg.duration || 0) * PX_PER_SEC));
+        const left = offsetCssPx;
+        const width = segCssPx;
+        const el = document.createElement('div');
+        el.className = 'legend-item';
+        el.style.left = left + 'px';
+        el.style.width = Math.max(36, width) + 'px';
+        const color = seg.type === 'silence' ? '#b0b7c6' : colorForSource(seg.sourceId || seg.id);
+        const name = seg.label || (seg.type === 'silence' ? `${(seg.displayDuration || seg.duration || 0)}s靜音` : ((files.find(f => f.id === seg.sourceId)?.name) || '(來源已刪除)'));
+        el.title = name;
+        el.innerHTML = `<div class="color-box" style="background:${color}"></div><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:calc(100% - 22px)">${escapeHtml(name)}</div>`;
+        // clicking a legend item will play from that segment's start position
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const clickPos = left + (width / 2);
+          const seekSec = clickPos / PX_PER_SEC;
+          // scroll preview so clicked pos is centered when possible
+          const target = Math.max(0, Math.min((parseFloat(sequencePreviewCanvas.style.width) || sequencePreviewCanvas.clientWidth) - previewWrap.clientWidth, Math.round(seekSec * PX_PER_SEC - previewWrap.clientWidth / 2)));
+          previewWrap.scrollLeft = target;
+          // play sequence from that time if available
+          if (sequenceRenderedBuffer) playSequenceFrom(seekSec);
+        });
+        legendInner.appendChild(el);
+        offsetCssPx += segCssPx;
+      }
+      // ensure legend width matches preview canvas width
+      legendInner.style.width = sequencePreviewCanvas.style.width || `${offsetCssPx}px`;
+      // keep legend visually synced with preview
+      legendInner.style.transform = `translateX(-${previewWrap.scrollLeft}px)`;
+    }
+
+    // sync preview scroll -> legend transform (single scrollbar behavior)
+    previewWrap.addEventListener('scroll', () => {
+      legendInner.style.transform = `translateX(-${previewWrap.scrollLeft}px)`;
+    });
+
+    // clicking on the legend container seeks the preview (quick navigation)
+    legendDiv.addEventListener('click', (e) => {
+      if (!sequencePreviewCanvas.style.width) return;
+      const rect = legendDiv.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const totalWidth = parseFloat(sequencePreviewCanvas.style.width) || sequencePreviewCanvas.clientWidth;
+      // center clicked point in preview when possible
+      const desired = clickX + previewWrap.scrollLeft - (previewWrap.clientWidth / 2);
+      const targetScroll = Math.max(0, Math.min(totalWidth - previewWrap.clientWidth, desired));
+      previewWrap.scrollLeft = targetScroll;
+    });
+
+    function stopSequencePlayback() {
+      if (seqSource) { try { seqSource.stop(); } catch (e) { } try { seqSource.disconnect(); } catch (e) { } seqSource = null; }
+      seqIsPlaying = false;
+      if (seqStopTimer) { clearTimeout(seqStopTimer); seqStopTimer = null; }
+      topPlay.disabled = false; topPause.disabled = true;
+    }
+
+    function playSequenceFrom(offsetSec = 0) {
+      if (!sequenceRenderedBuffer) return alert('序列尚未產生');
+      stopSequencePlayback();
+      seqSource = ac.createBufferSource();
+      seqSource.buffer = sequenceRenderedBuffer;
+      seqSource.connect(ac.destination);
+      const clamped = Math.max(0, Math.min(sequenceRenderedBuffer.duration, offsetSec));
+      const remaining = Math.max(0.001, sequenceRenderedBuffer.duration - clamped);
+      seqSource.start(0, clamped);
+      seqStartRealtime = ac.currentTime;
+      seqOffset = clamped;
+      seqIsPlaying = true;
+      seqStopTimer = setTimeout(() => { stopSequencePlayback(); seqOffset = 0; }, remaining * 1000);
+      topPlay.disabled = true; topPause.disabled = false;
+      requestAnimationFrame(seqCursorLoop);
+    }
+
+    function pauseOrResumeSequence() {
+      if (!sequenceRenderedBuffer) return;
+      if (seqIsPlaying) {
+        const elapsed = ac.currentTime - seqStartRealtime;
+        seqOffset = Math.min(sequenceRenderedBuffer.duration, seqOffset + elapsed);
+        stopSequencePlayback();
+      } else {
+        playSequenceFrom(seqOffset);
+      }
+    }
+
+    function seqCursorLoop() {
+      if (!seqIsPlaying || !sequenceRenderedBuffer) return;
+      const totalDuration = sequence.reduce((s, i) => s + (i.displayDuration || i.duration || 0), 0) || 0;
+      const virtualWidth = Math.max(300, Math.ceil(totalDuration * PX_PER_SEC));
+      const finalWidth = Math.min(virtualWidth, MAX_CANVAS_WIDTH);
+      drawSequencePreview(finalWidth, virtualWidth);
+      drawSeqCursor();
+      requestAnimationFrame(seqCursorLoop);
+    }
+
+    function drawSeqCursor() {
+      if (!sequenceRenderedBuffer) return;
+      const canvas = sequencePreviewCanvas;
+      const h = canvas.height;
+      const elapsed = ac.currentTime - seqStartRealtime;
+      const pos = Math.min(sequenceRenderedBuffer.duration, seqOffset + elapsed);
+      const offsetPx = (pos * PX_PER_SEC) * devicePixelRatio;
+      seqPreviewCtx.strokeStyle = 'rgba(11,118,239,0.95)';
+      seqPreviewCtx.beginPath(); seqPreviewCtx.moveTo(offsetPx + 0.5, 0); seqPreviewCtx.lineTo(offsetPx + 0.5, h); seqPreviewCtx.stroke();
+      seqPreviewCtx.fillStyle = 'rgba(11,118,239,0.95)'; seqPreviewCtx.fillRect(Math.max(0, offsetPx - 1), 0, 2, h);
+    }
+
+    topPlay.addEventListener('click', () => playSequenceFrom(0));
+    topPause.addEventListener('click', () => pauseOrResumeSequence());
+    sequencePreviewCanvas.addEventListener('click', (e) => {
+      if (!sequenceRenderedBuffer) return;
+      const rect = sequencePreviewCanvas.getBoundingClientRect();
+      const clickedCssPx = e.clientX - rect.left + previewWrap.scrollLeft;
+      const posSec = clickedCssPx / PX_PER_SEC;
+      playSequenceFrom(posSec);
+    });
+
+    createClip.addEventListener('click', async () => {
+      if (!selectedFileId) return alert('請先載入檔案');
+      const parent = files.find(x => x.id === selectedFileId);
+      if (!parent || !parent.audioBuffer) return alert('檔案尚未解碼');
+      let s = Math.max(0, parseFloat(startInput.value) || 0);
+      let e = Math.min(parent.audioBuffer.duration, parseFloat(endInput.value) || parent.audioBuffer.duration);
+      if (e <= s) e = parent.audioBuffer.duration;
+      const newBuf = sliceAudioBuffer(parent.audioBuffer, s, e);
+      try {
+        showOverlay('產生片段', '正在編碼 MP3…');
+        const kbps = parseInt(mp3Bitrate.value, 10) || 192;
+        const mp3Blob = await encodeBufferToMp3(newBuf, kbps);
+        const name = `${parent.originalName.replace(/\.([^.]+)$/, '')}_clip_${s.toFixed(2)}-${e.toFixed(2)}.mp3`;
+        const fileObj = new File([mp3Blob], name, { type: 'audio/mpeg' });
+        const arr = await mp3Blob.arrayBuffer();
+        const decoded = await ac.decodeAudioData(arr.slice(0));
+        const id = Math.random().toString(36).slice(2, 9);
+        files.push({ id, name, file: fileObj, audioBuffer: decoded, originalName: parent.originalName });
+        renderFileList();
+        hideOverlay();
+        alert('已建立 MP3 片段並加入檔案庫');
+        scheduleSequencePreviewUpdate();
+      } catch (err) { hideOverlay(); console.error(err); alert('建立片段失敗：' + (err && err.message || err)); }
+    });
+
+    removeSegmentBtn.addEventListener('click', async () => {
+      if (!selectedFileId) return alert('請先選擇檔案');
+      const parent = files.find(x => x.id === selectedFileId);
+      if (!parent || !parent.audioBuffer) return alert('檔案尚未解碼或不存在');
+      let s = Math.max(0, parseFloat(startInput.value) || 0);
+      let e = Math.min(parent.audioBuffer.duration, parseFloat(endInput.value) || parent.audioBuffer.duration);
+      if (e <= s) e = parent.audioBuffer.duration;
+      if (s <= 0 && e >= parent.audioBuffer.duration) return alert('已選取整首，無法移除（結果為空）');
+      try {
+        showOverlay('移除片段', '正在產生合併後的新音訊…');
+        const newBuf = removeSegmentFromBuffer(parent.audioBuffer, s, e);
+        const kbps = parseInt(mp3Bitrate.value, 10) || 192;
+        const mp3Blob = await encodeBufferToMp3(newBuf, kbps);
+        const name = `${parent.originalName.replace(/\.([^.]+)$/, '')}_removed_${s.toFixed(2)}-${e.toFixed(2)}.mp3`;
+        const fileObj = new File([mp3Blob], name, { type: 'audio/mpeg' });
+        const arr = await mp3Blob.arrayBuffer();
+        const decoded = await ac.decodeAudioData(arr.slice(0));
+        const id = Math.random().toString(36).slice(2, 9);
+        files.push({ id, name, file: fileObj, audioBuffer: decoded, originalName: parent.originalName });
+        renderFileList();
+        hideOverlay();
+        alert('已建立移除後的新音訊並加入檔案庫（原檔保留）');
+        scheduleSequencePreviewUpdate();
+      } catch (err) { hideOverlay(); console.error(err); alert('移除並合併失敗：' + (err && err.message || err)); }
+    });
+
+    function removeSegmentFromBuffer(buffer, start, end) {
+      const sr = buffer.sampleRate;
+      const chans = buffer.numberOfChannels;
+      const startFrame = Math.floor(start * sr);
+      const endFrame = Math.floor(end * sr);
+      const beforeLen = Math.max(0, startFrame);
+      const afterLen = Math.max(0, buffer.length - endFrame);
+      const newLen = beforeLen + afterLen;
+      const newBuf = ac.createBuffer(chans, newLen, sr);
+      for (let c = 0; c < chans; c++) {
+        const old = buffer.getChannelData(c);
+        const dest = newBuf.getChannelData(c);
+        if (beforeLen > 0) dest.set(old.subarray(0, startFrame), 0);
+        if (afterLen > 0) dest.set(old.subarray(endFrame), beforeLen);
+      }
+      return newBuf;
+    }
+
+    silence5.addEventListener('click', () => addSilenceFromUI(5));
+    silence10.addEventListener('click', () => addSilenceFromUI(10));
+    silence20.addEventListener('click', () => addSilenceFromUI(20));
+    insertSilence.addEventListener('click', () => addSilenceFromUI(parseFloat(silenceSecondsInput.value) || 0));
+    function addSilenceFromUI(secs) { if (!(secs > 0)) return alert('請輸入大於零的秒數'); const label = `${secs}s靜音`; const si = { id: Math.random().toString(36).slice(2, 9), type: 'silence', duration: secs, displayDuration: secs, label }; sequence.push(si); renderSequence(); updateDownloadButton(); scheduleSequencePreviewUpdate(); }
+
+    addToSequenceBtn.addEventListener('click', () => {
+      if (!selectedFileId) return alert('請先選擇檔案');
+      const p = files.find(x => x.id === selectedFileId);
+      if (!p || !p.audioBuffer) return alert('尚未解碼');
+      const s = Math.max(0, parseFloat(startInput.value) || 0);
+      let e = Math.min(p.audioBuffer.duration, parseFloat(endInput.value) || p.audioBuffer.duration);
+      if (e <= s) e = p.audioBuffer.duration;
+      const origDur = Math.max(0, e - s);
+      const item = { id: Math.random().toString(36).slice(2, 9), type: 'clip', sourceId: selectedFileId, start: s, end: e, duration: origDur, displayDuration: origDur, label: p.name };
+      sequence.push(item);
+      renderSequence();
+      updateDownloadButton();
+      scheduleSequencePreviewUpdate();
+    });
+
+    function addClipToSequence(sourceId, start, end) {
+      const origDur = Math.max(0, end - start);
+      const item = { id: Math.random().toString(36).slice(2, 9), type: 'clip', sourceId, start, end, duration: origDur, displayDuration: origDur, label: (files.find(f => f.id === sourceId)?.name || '來源') };
+      sequence.push(item); renderSequence(); updateDownloadButton(); scheduleSequencePreviewUpdate();
+    }
+
+    function renderSequence() {
+      sequenceDiv.innerHTML = '';
+      let cumStart = 0;
+      sequence.forEach((si, idx) => {
+        const div = document.createElement('div'); div.className = 'seq-item'; div.draggable = true; div.dataset.seqid = si.id;
+        const src = files.find(x => x.id === si.sourceId);
+        const info = document.createElement('div'); info.className = 'info';
+        if (si.type === 'silence') {
+          const label = si.label || `${(si.displayDuration || si.duration || 0)}s靜音`;
+          info.innerHTML = `<strong>${escapeHtml(label)}</strong><div class='muted'>靜音段 · ${Number(si.displayDuration || si.duration || 0).toFixed(2)}s</div>`;
+        } else {
+          const srcName = src ? escapeHtml(src.name) : '(來源已刪除)';
+          info.innerHTML = `<strong title="${srcName}">${srcName}</strong><div class='muted'>來源片段 · ${Number(si.duration || 0).toFixed(2)}s</div>`;
+        }
+        const controls = document.createElement('div'); controls.className = 'seq-controls';
+        const up = document.createElement('button'); up.className = 'ghost'; up.textContent = '▲'; up.title = '上移'; up.onclick = () => moveSeq(idx, idx - 1);
+        const down = document.createElement('button'); down.className = 'ghost'; down.textContent = '▼'; down.title = '下移'; down.onclick = () => moveSeq(idx, idx + 1);
+        const del = document.createElement('button'); del.className = 'ghost'; del.textContent = '刪除'; del.title = '刪除此段'; del.onclick = () => { sequence.splice(idx, 1); renderSequence(); updateDownloadButton(); scheduleSequencePreviewUpdate(); };
+        controls.appendChild(up); controls.appendChild(down); controls.appendChild(del);
+        div.appendChild(info); div.appendChild(controls);
+
+        div.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/seq-id', si.id); div.style.opacity = 0.5; });
+        div.addEventListener('dragend', () => div.style.opacity = 1);
+        div.addEventListener('dragover', (e) => e.preventDefault());
+        div.addEventListener('drop', (e) => { e.preventDefault(); const dropped = e.dataTransfer.getData('text/seq-id'); reorderSequence(dropped, si.id); });
+
+        sequenceDiv.appendChild(div);
+        cumStart += (si.displayDuration || si.duration || 0);
+      });
+    }
+
+    function moveSeq(from, to) { if (to < 0 || to >= sequence.length) return; const it = sequence.splice(from, 1)[0]; sequence.splice(to, 0, it); renderSequence(); updateDownloadButton(); scheduleSequencePreviewUpdate(); }
+    function reorderSequence(droppedId, targetId) { const from = sequence.findIndex(x => x.id === droppedId); const to = sequence.findIndex(x => x.id === targetId); if (from < 0 || to < 0) return; const it = sequence.splice(from, 1)[0]; sequence.splice(to, 0, it); renderSequence(); updateDownloadButton(); scheduleSequencePreviewUpdate(); }
+
+    function updateDownloadButton() { downloadMp3Top.disabled = sequence.length === 0; downloadMergedTop.disabled = sequence.length === 0; }
+    async function exportSequenceToMp3() {
+      if (sequence.length === 0) throw new Error('沒有任何段落');
+      showOverlay('匯出 MP3（高品質）', '正在渲染並編碼…');
+      try {
+        const targetSR = 44100; const totalDuration = sequence.reduce((s, i) => s + (i.displayDuration || i.duration || 0), 0) || 0;
+        const offline = new OfflineAudioContext(2, Math.ceil(totalDuration * targetSR), targetSR);
+        let cursor = 0;
+        for (const seg of sequence) {
+          if (seg.type === 'silence') {
+            const len = Math.ceil((seg.displayDuration || seg.duration) * targetSR);
+            const silent = offline.createBuffer(2, len, targetSR);
+            const ssrc = offline.createBufferSource(); ssrc.buffer = silent; ssrc.connect(offline.destination); ssrc.start(cursor);
+            cursor += seg.displayDuration || seg.duration;
+          } else {
+            const srcFile = files.find(f => f.id === seg.sourceId);
+            if (!srcFile || !srcFile.audioBuffer) { cursor += seg.displayDuration || seg.duration; continue; }
+            const origDur = seg.duration; const displayDur = seg.displayDuration || origDur;
+            const playbackRate = Math.max(0.01, origDur / displayDur);
+            const ssrc = offline.createBufferSource(); ssrc.buffer = srcFile.audioBuffer; ssrc.playbackRate.value = playbackRate;
+            ssrc.connect(offline.destination);
+            ssrc.start(cursor, seg.start, seg.duration);
+            cursor += displayDur;
+          }
+        }
+        const rendered = await offline.startRendering();
+        const kbps = parseInt(mp3Bitrate.value, 10) || 192;
+        const ch0 = rendered.getChannelData(0).slice(0);
+        const ch1 = rendered.numberOfChannels > 1 ? rendered.getChannelData(1).slice(0) : new Float32Array(ch0.length);
+        const mp3Array = encodeMp3FromChannels([ch0, ch1], targetSR, kbps);
+        const blob = new Blob(mp3Array, { type: 'audio/mpeg' });
+        hideOverlay();
+        return blob;
+      } catch (err) {
+        hideOverlay();
+        throw err;
+      }
+    }
+
+    downloadMp3Top.addEventListener('click', async () => {
+      if (isExporting) return;
+      try {
+        isExporting = true;
+        const blob = await exportSequenceToMp3();
+        if (lastExportBlobUrl) URL.revokeObjectURL(lastExportBlobUrl);
+        lastExportBlobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = lastExportBlobUrl; a.download = 'final_combined.mp3'; document.body.appendChild(a); a.click(); a.remove();
+      } catch (err) { console.error(err); alert('匯出失敗：' + (err && err.message || err)); }
+      isExporting = false;
+    });
+
+    downloadMergedTop.addEventListener('click', async () => {
+      if (isExporting) return;
+      try {
+        isExporting = true;
+        await renderSequencePreview();
+        const blob = await exportSequenceToMp3();
+        if (lastExportBlobUrl) URL.revokeObjectURL(lastExportBlobUrl);
+        lastExportBlobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = lastExportBlobUrl; a.download = 'final_combined.mp3'; document.body.appendChild(a); a.click(); a.remove();
+      } catch (err) { console.error(err); alert('下載失敗：' + (err && err.message || err)); }
+      isExporting = false;
+    });
+
+    async function encodeBufferToMp3(buffer, kbps) {
+      const targetSR = 44100;
+      const offline = new OfflineAudioContext(2, Math.ceil(buffer.duration * targetSR), targetSR);
+      const src = offline.createBufferSource(); src.buffer = buffer; src.connect(offline.destination); src.start(0);
+      const rendered = await offline.startRendering();
+      const ch0 = rendered.getChannelData(0).slice(0);
+      const ch1 = rendered.numberOfChannels > 1 ? rendered.getChannelData(1).slice(0) : new Float32Array(ch0.length);
+      const mp3Array = encodeMp3FromChannels([ch0, ch1], targetSR, kbps);
+      return new Blob(mp3Array, { type: 'audio/mpeg' });
+    }
+
+    function encodeMp3FromChannels(channelBuffers, sampleRate, kbps) {
+      const left = floatTo16BitPCM(channelBuffers[0]); const right = floatTo16BitPCM(channelBuffers[1]);
+      const mp3Encoder = new lamejs.Mp3Encoder(2, sampleRate, kbps);
+      const blockSize = 1152; const mp3Data = [];
+      for (let i = 0; i < left.length; i += blockSize) {
+        const leftChunk = left.subarray(i, i + blockSize); const rightChunk = right.subarray(i, i + blockSize);
+        const mp3buf = mp3Encoder.encodeBuffer(leftChunk, rightChunk);
+        if (mp3buf.length > 0) mp3Data.push(new Uint8Array(mp3buf));
+      }
+      const end = mp3Encoder.flush(); if (end.length > 0) mp3Data.push(new Uint8Array(end));
+      return mp3Data;
+    }
+    function floatTo16BitPCM(float32Array) {
+      const l = float32Array.length; const buffer = new Int16Array(l);
+      for (let i = 0; i < l; i++) { let s = Math.max(-1, Math.min(1, float32Array[i])); buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF; }
+      return buffer;
+    }
+    function sliceAudioBuffer(buffer, start, end) {
+      const sr = buffer.sampleRate; const chans = buffer.numberOfChannels;
+      const startFrame = Math.floor(start * sr); const endFrame = Math.floor(end * sr); const length = Math.max(0, endFrame - startFrame);
+      const newBuf = ac.createBuffer(chans, length, sr);
+      for (let c = 0; c < chans; c++) {
+        const old = buffer.getChannelData(c); const seg = newBuf.getChannelData(c);
+        for (let i = 0; i < length; i++) seg[i] = old[startFrame + i] || 0;
+      }
+      return newBuf;
+    }
+
+    let previewTimer = null;
+    function scheduleSequencePreviewUpdate() { if (previewTimer) clearTimeout(previewTimer); previewTimer = setTimeout(() => { renderSequencePreview(); previewTimer = null; }, 120); }
+
+    function selectFile(id, autoPlay = false) {
+      const it = files.find(x => x.id === id);
+      if (!it) return alert('找不到檔案');
+      if (!it.audioBuffer) return alert('該檔案尚未成功解碼');
+      try { if (editorIsPlaying) stopEditorPlayback(); } catch (e) { }
+      selectedFileId = id; viewingBuffer = it.audioBuffer; currentName.textContent = it.name; durationLabel.textContent = viewingBuffer.duration.toFixed(2);
+      startInput.value = 0; endInput.value = viewingBuffer.duration.toFixed(3); cursorTime = 0; startLocked = false; endLocked = false; lockStart(false); lockEnd(false);
+      drawWaveform(viewingBuffer);
+      if (autoPlay || autoPlayEditor.checked) {
+        const s = Math.max(0, parseFloat(startInput.value) || 0);
+        editorPlayFrom(s);
+      }
+    }
+
+    function showOverlay(title, sub) { overlayTitle.textContent = title || '處理中…'; overlaySub.textContent = sub || ''; overlay.classList.add('show'); }
+    function hideOverlay() { overlay.classList.remove('show'); }
+
+    function adjustTopbarHeight(virtualWidth) {
+      try {
+        const visibleWidth = previewWrap.clientWidth || 600;
+        const basePreviewHeight = 90;
+        if (!virtualWidth || virtualWidth <= visibleWidth) {
+          previewWrap.style.height = basePreviewHeight + 'px';
+          sequencePreviewCanvas.style.height = basePreviewHeight + 'px';
+          topbar.style.height = '140px';
+          pageEl.style.paddingTop = (topbar.offsetHeight + 16) + 'px';
+          return;
+        }
+        const overflow = Math.max(0, virtualWidth - visibleWidth);
+        const extraRows = Math.min(4, Math.ceil(overflow / Math.max(300, visibleWidth)));
+        const newPreviewHeight = Math.min(260, basePreviewHeight + extraRows * 40);
+        previewWrap.style.height = newPreviewHeight + 'px';
+        sequencePreviewCanvas.style.height = newPreviewHeight + 'px';
+        const newTopbarH = Math.max(140, newPreviewHeight + 56);
+        topbar.style.height = newTopbarH + 'px';
+        pageEl.style.paddingTop = (topbar.offsetHeight + 16) + 'px';
+      } catch (e) { console.warn('adjustTopbarHeight error', e); }
+    }
+
+    drawPreviewEmpty();
+    renderFileList();
+    renderSequence();
+    updateDownloadButton();
+
+    const ro = new ResizeObserver(() => { if (viewingBuffer) drawWaveform(viewingBuffer); if (sequenceRenderedBuffer) { const totalDuration = sequence.reduce((s, i) => s + (i.displayDuration || i.duration || 0), 0) || 0; const virtualWidth = Math.max(300, Math.ceil(totalDuration * PX_PER_SEC)); const finalWidth = Math.min(virtualWidth, MAX_CANVAS_WIDTH); drawSequencePreview(finalWidth, virtualWidth); } else drawPreviewEmpty(); });
+    ro.observe(waveCanvas); ro.observe(sequencePreviewCanvas); ro.observe(previewWrap);
+
+    window.addEventListener('beforeunload', () => { try { if (editorIsPlaying) stopEditorPlayback(); if (seqIsPlaying) stopSequencePlayback(); } catch (e) { } });
+  </script>
+</body>
+
+</html>
